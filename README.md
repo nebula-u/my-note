@@ -1,4 +1,4 @@
-### [update](https://github.com/nebula-u/markdown/tree/main#update)
+### [更新](https://github.com/nebula-u/markdown/tree/main#update)
 
 > ##### 2024/07/07
 >

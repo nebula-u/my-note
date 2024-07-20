@@ -1,54 +1,69 @@
-## Electron主进程和渲染进程间的通信
+## Electron 渲染进程调用主进程函数/主进程与渲染进程之间的通信
 
-### 异步通信
+在 Electron 中，渲染进程不能直接调用主进程的函数，但可以通过**IPC通信机制**实现这一目的。
 
-渲染进程给主进程发送消息：
+### 渲染进程向主进程发送消息
 
-```javascript
-const {ipcRenderer} = require('electron')
+渲染进程可以使用 `ipcRenderer` 发送消息到主进程，主进程使用 `ipcMain` 接收并处理这些消息。反之亦然。
 
-//向主进程发送消息
-ipcRenderer.send('name', 'nebulau')
-```
+#### 示例
 
-主进程接收渲染进程消息：
+- **主进程**：
+  
+  ```javascript
+  const { ipcMain } = require('electron');
+  ipcMain.handle('some-channel', async (event, args) => {
+    // 处理渲染进程的请求
+    return 'response from main process';
+  });
 
-```javascript
-ipcMain.on('name', (ev, data)=>{
-    console.log(data)
-})
-```
+- **渲染进程**
 
-主进程给渲染进程发送消息：
+  ```javascript
+  const { ipcRenderer } = require('electron');
+  async function callMainProcess() {
+    const response = await ipcRenderer.invoke('some-channel', 'some-args');
+    console.log(response); // 输出 'response from main process'
+  }
+  callMainProcess();
+  ```
 
-```javascript
-ipcMain.on('name', (ev, data)=>{
-    console.log(data)
-    ev.sender.send('reply', 'recved name: ' + data)
-})
-```
+### 主进程向渲染进程发送消息
 
-渲染进程接收主进程消息：
+在 Electron 中，主进程可以通过 `webContents.send` 方法向渲染进程发送消息。
 
-```javascript
-const {ipcRenderer} = require('electron')
+#### 示例
 
-//向主进程发送消息
-ipcRenderer.on('reply', (ev, data)=>{
-	console.log(data)
-})
-```
+- **主进程**：
+  ```javascript
+  const { app, BrowserWindow } = require('electron');
+  let mainWindow;
+  
+  app.on('ready', () => {
+    mainWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js')
+      }
+    });
+  
+    mainWindow.loadFile('index.html');
+  
+    // 在窗口加载完成后发送消息
+    mainWindow.webContents.on('did-finish-load', () => {
+      mainWindow.webContents.send('message-from-main', 'Hello from Main Process');
+    });
+  });
 
-###  同步通信
+- **渲染进程**
 
-渲染进程给主进程发送消息：
+  ```javascript
+  const { ipcRenderer } = require('electron');
+  
+  ipcRenderer.on('message-from-main', (event, message) => {
+    console.log(message); // 输出 'Hello from Main Process'
+  });
+  ```
 
-```javascript
-const {ipcRenderer} = require('electron')
-
-//向主进程发送消息
-ipcRenderer.sendSync('name', 'nebulau')
-```
-
-主进程接收渲染进程消息代码和异步通信代码相同
-
+  
